@@ -238,7 +238,7 @@ Issue #9 (GitHub Project)  ←→  @Issue-9  ←→  Scenario Outline "Fin Emerg
 .\gradlew.bat clean test --console=plain "-Dkarate.options=--tags @Issue-15,@Issue-16"  # coma = OR
 ```
 
-Reporte: `target/karate-reports/karate-summary.html` → clic en un escenario para ver request, headers, response y cada `match`.
+Reporte: `target/karate-reports/karate-summary.html` → clic en un escenario para ver request, headers, response y cada `match`. Copia del reporte completo (37/37, 11/10/2026): `evidencias/reporte-karate-37-de-37/karate-summary.html` (no se sube a git).
 
 **Registro de ejecuciones locales (11/10/2026):**
 
@@ -266,7 +266,7 @@ Cambios respecto al archivo del curso: `jq -Rs` en el comentario y la ruta `buil
 ### Publicar en GitHub
 
 ```bash
-# 1. Repositorio vacío en GitHub (sin README, para que el primer Issue sea el #1) y subir el código
+# 1. Repositorio vacío en GitHub (sin README ni licencia: si trae un commit inicial, el push del historial local es rechazado) y subir el código
 git remote add origin https://github.com/<usuario>/<repo>.git
 git push -u origin main            # → en Actions corre @smoketest automáticamente
 

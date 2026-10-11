@@ -37,3 +37,6 @@ Archivos de apoyo/
 ## volcados de la JVM ##
 hs_err_pid*.log
 replay_pid*.log
+
+## copia local del reporte para la sustentación ##
+evidencias/

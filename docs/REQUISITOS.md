@@ -64,7 +64,7 @@ Los eventos se envían en el body de la petición, con el texto **literal** de l
 - **12 transiciones inválidas:** las otras 12 celdas. El diseño de casos las cubre **todas**.
 
 Para las inválidas, el enunciado solo dice que la transición "no está definida". No define ningún código HTTP.
-Lo único documentado y verificable es que **el estado no cambia**. El código exacto se tomará de la observación real (Fase 2).
+Lo único documentado y verificable es que **el estado no cambia**. La API responde 200 con `valida: false` y `noDefinida: true` (ver `HALLAZGOS_API.md`).
 
 ---
 
@@ -112,4 +112,4 @@ Lo único documentado y verificable es que **el estado no cambia**. El código e
 | 8 | F | F | F | R4 | REQ-CLI-04 |
 
 La API documenta exactamente 4 reglas, con los mismos nombres de acción que el enunciado, así que la cantidad coincide.
-Los textos exactos de la respuesta (campo de la acción, número de regla) se confirmarán en la Fase 2.
+Los textos exactos de la respuesta (`accion`, `reglaIndex`) están en `HALLAZGOS_API.md`.

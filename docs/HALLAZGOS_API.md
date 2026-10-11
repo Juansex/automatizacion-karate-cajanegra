@@ -1,4 +1,4 @@
-# Hallazgos de la exploración de la API (Fase 2)
+# Hallazgos de la exploración de la API
 
 - **Fecha:** 2026-10-08.
 - **Herramienta:** `curl`, contra `https://taller-de-tecnicas-de-prueba-de-caja.onrender.com/api`.
@@ -58,7 +58,7 @@ Forma de la respuesta:
 | (cualquiera) | "Inexistente" | **400** | — | — | — | `{"error":"Evento desconocido: Inexistente"}` |
 
 Después de cada evento inválido, `GET /estado` confirmó que el estado **no cambió**. El historial registra cada intento.
-Las celdas S2-Alarma, S3-Alarma y S3-Reset, y el Reset tras una alarma desde S2/S3, no se exploraron con curl para no hacer llamadas de más. **Quedaron verificadas en la ejecución Karate de la Fase 4** (Issues #5, #6 y #9, todas aprobadas), con el mismo patrón de respuesta.
+Las celdas S2-Alarma, S3-Alarma y S3-Reset, y el Reset tras una alarma desde S2/S3, no se exploraron con curl para no hacer llamadas de más. **Quedaron verificadas en la ejecución Karate** (Issues #5, #6 y #9, todas aprobadas), con el mismo patrón de respuesta.
 
 **Conclusión:** el comportamiento coincide con el enunciado (reglas a–d).
 - Una transición no definida **no se rechaza con un código 4xx**: la API responde 200 con `valida:false`, `noDefinida:true` y el estado sin cambios.
