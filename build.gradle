@@ -1,0 +1,28 @@
+plugins {
+    id 'java'
+}
+
+group = 'cajanegra2'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    karateVersion = '1.4.1'
+}
+
+dependencies {
+    testImplementation "com.intuit.karate:karate-junit5:${karateVersion}"
+    testImplementation "ch.qos.logback:logback-classic:1.5.6"
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+    maxHeapSize = "384m"
+    systemProperty 'karate.output.dir', 'target/'
+    systemProperty "karate.options", System.getProperty("karate.options")
+
+}

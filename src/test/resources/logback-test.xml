@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <!-- Un patrón mucho más limpio y sin ruido de hilos -->
+            <pattern>%d{HH:mm:ss.SSS} %-5level - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- SILENCIAR APACHE HTTP CLIENT (Línea clave para tu error) -->
+    <logger name="org.apache.http" level="INFO"/>
+
+    <!-- Controlar el nivel de Karate (INFO evita el detalle excesivo de red, DEBUG muestra todo) -->
+    <logger name="com.intuit.karate" level="INFO"/>
+
+    <root level="info">
+        <appender-ref ref="STDOUT" />
+    </root>
+</configuration>

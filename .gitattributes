@@ -1,0 +1,7 @@
+# Normaliza finales de línea al hacer commit (el proyecto se edita en Windows y el pipeline corre en Linux)
+* text=auto
+# gradlew lo ejecuta bash en ubuntu-latest: con CRLF falla con "bad interpreter"
+gradlew text eol=lf
+*.bat text eol=crlf
+*.jar binary
+*.sh text eol=lf

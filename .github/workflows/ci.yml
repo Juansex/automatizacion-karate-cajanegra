@@ -1,0 +1,209 @@
+name: CI / CD Pipeline
+
+on:
+  push:
+    branches: [ 'main', 'develop' ]
+  pull_request:
+    branches: [ 'main', 'develop' ]
+  workflow_dispatch:
+    inputs:
+      testTag:
+        description: 'Tag de Karate a ejecutar (puede incluir o no @). Si se deja vacío en ejecución manual, se usará @smoketest en integración.'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      JAVA_VERSION: '21'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-jdk-${{ env.JAVA_VERSION }}-${{ hashFiles('**/build.gradle','**/settings.gradle','**/gradle.lockfile') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-jdk-${{ env.JAVA_VERSION }}-
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Run tests (with tag support)
+        id: test_execution
+        continue-on-error: true
+        run: |
+          # Determine tag: use workflow_dispatch input when present, otherwise default to @smoketest for CI events
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag='${{ github.event.inputs.testTag }}'
+          else
+            tag='@smoketest'
+          fi
+
+          # normalize: if tag is not empty and doesn't start with @, prepend it
+          if [ -n "$tag" ] && [ "${tag#@}" = "$tag" ]; then
+            tag="@$tag"
+          fi
+
+          echo "Using Karate tag: '$tag'"
+          echo "tag=$tag" >> $GITHUB_ENV
+
+          if [ -n "$tag" ]; then
+            ./gradlew clean test --no-daemon --console=plain --stacktrace -Dkarate.options="--tags $tag"
+          else
+            ./gradlew clean test --no-daemon --console=plain --stacktrace
+          fi
+
+      - name: List target output (for debugging)
+        if: always()
+        run: |
+          echo "-- target dir listing --"
+          ls -la target || true
+          echo "-- karate reports listing --"
+          ls -la target/karate-reports || true
+          echo "-- test results listing --"
+          ls -la build/test-results/test || true
+
+      - name: Upload Karate reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: karate-reports
+          path: target/karate-reports
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: build/test-results/test
+
+      - name: Determine test status
+        if: always()
+        id: test_status
+        run: |
+          # Guardar el exit code del paso anterior
+          # continue-on-error: true permite que este paso se ejecute incluso si el test falló
+          exit_code=${{ steps.test_execution.outcome }}
+          
+          if [ "$exit_code" = "success" ]; then
+            echo "status=passed" >> $GITHUB_OUTPUT
+            echo "TEST_RESULT=passed" >> $GITHUB_ENV
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "TEST_RESULT=failed" >> $GITHUB_ENV
+          fi
+
+      - name: Extract issue number from tag
+        if: always() && github.event_name == 'workflow_dispatch'
+        id: issue_info
+        run: |
+          tag="${{ env.tag }}"
+          # Extraer Issue-X del tag (ej: @Issue-2 → 2)
+          if [[ $tag =~ Issue-([0-9]+) ]]; then
+            issue_number="${BASH_REMATCH[1]}"
+            echo "issue_number=$issue_number" >> $GITHUB_OUTPUT
+            echo "Found Issue #$issue_number from tag '$tag'"
+          else
+            echo "No Issue tag found in: '$tag'"
+            echo "issue_number=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update GitHub Issue with test results
+        if: always() && github.event_name == 'workflow_dispatch' && steps.issue_info.outputs.issue_number != ''
+        run: |
+          ISSUE_NUMBER="${{ steps.issue_info.outputs.issue_number }}"
+          TEST_STATUS="${{ steps.test_status.outputs.status }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          REPO="${{ github.repository }}"
+          GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+
+          echo "Updating Issue #$ISSUE_NUMBER with status: $TEST_STATUS"
+
+          # Determinar label y emoji según estado
+          case "$TEST_STATUS" in
+            "passed")
+              STATUS_LABEL="status:passed"
+              STATUS_EMOJI="✅"
+              ;;
+            "failed")
+              STATUS_LABEL="status:failed"
+              STATUS_EMOJI="❌"
+              ;;
+            *)
+              STATUS_LABEL="status:unknown"
+              STATUS_EMOJI="⚠️"
+              ;;
+          esac
+
+          # URLs de API
+          ISSUES_API="https://api.github.com/repos/$REPO/issues/$ISSUE_NUMBER"
+          LABELS_API="$ISSUES_API/labels"
+
+          # Obtener labels actuales
+          echo "Fetching current labels from Issue #$ISSUE_NUMBER..."
+          CURRENT_LABELS=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "$ISSUES_API" | jq -r '.labels[].name')
+
+          # Remover labels anteriores de estado (status:*)
+          for label in $CURRENT_LABELS; do
+            if [[ $label == status:* ]]; then
+              echo "  Removing label: $label"
+              curl -s -X DELETE \
+                -H "Authorization: token $GITHUB_TOKEN" \
+                "$LABELS_API/$label" \
+                -o /dev/null
+            fi
+          done
+
+          # Agregar nuevo label
+          echo "Adding new label: $STATUS_LABEL"
+          curl -s -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$LABELS_API" \
+            -d "[\"$STATUS_LABEL\"]" \
+            -o /dev/null
+
+          # Agregar comentario
+          TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          COMMENT_BODY="$STATUS_EMOJI **Test Execution Report** ($TIMESTAMP)
+
+          - **Status**: $TEST_STATUS
+          - **Run**: [$RUN_URL]($RUN_URL)
+          - **Timestamp**: $TIMESTAMP
+
+          *Updated automatically by GitHub Actions*"
+
+          echo "Adding comment to Issue #$ISSUE_NUMBER..."
+          curl -s -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$ISSUES_API/comments" \
+            -d "{\"body\": $(printf "%s" "$COMMENT_BODY" | jq -Rs .)}" \
+            -o /dev/null
+
+          echo "✅ Issue #$ISSUE_NUMBER updated successfully!"
+          echo "  Label: $STATUS_LABEL"
+          echo "  Comment: Added"
+
+      - name: Fail workflow if tests failed
+        if: always() && env.TEST_RESULT == 'failed'
+        run: |
+          echo "❌ Tests failed during execution!"
+          exit 1
+
