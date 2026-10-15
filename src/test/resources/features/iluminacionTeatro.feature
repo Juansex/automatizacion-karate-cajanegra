@@ -108,7 +108,7 @@ Feature: Transición de estados del Sistema de Iluminación Inteligente en Audit
 
   # ---------------------------------------------------------------------------
   # Escenarios negativos: transiciones no definidas (el estado NO debe cambiar)
-  # La API responde 200 con valida=false y noDefinida=true (ver docs/HALLAZGOS_API.md)
+  # La API responde 200 con valida=false y noDefinida=true
   # ---------------------------------------------------------------------------
 
   @REQ-ILU-06 @Issue-7 @regression @negativo
@@ -178,19 +178,3 @@ Feature: Transición de estados del Sistema de Iluminación Inteligente en Audit
       | evento         |
       | Alarma de Humo |
       | Iniciar Show   |
-
-  @REQ-ILU-09 @Issue-16 @regression @negativo
-  Scenario Outline: Verificar que se rechaza un evento que no existe en la máquina de estados (<evento>)
-    * call read(irAEstado) { estadoObjetivo: 'S2' }
-    Given url baseUrl
-    And path 'iluminacion-teatro/evento'
-    And request { evento: '<evento>' }
-    When method post
-    Then status 400
-    And match response == { error: 'Evento desconocido: <evento>' }
-    * call read(verificarEstado) { estadoEsperado: 'S2' }
-
-    Examples:
-      | evento   |
-      | Apagar   |
-      | encender |

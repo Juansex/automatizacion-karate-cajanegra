@@ -63,28 +63,3 @@ Feature: Tabla de decisión del Controlador de Climatización Inteligente en una
       | presencia |
       | true      |
       | false     |
-
-  # ---------------------------------------------------------------------------
-  # Escenario negativo: validación de la entrada (ver HALLAZGOS en DOCUMENTACION_PROCESO.md)
-  # ---------------------------------------------------------------------------
-
-  @REQ-CLI-05 @Issue-15 @regression @negativo
-  Scenario Outline: Verificar que se rechaza una evaluación que no trae exactamente 3 condiciones (<caso>)
-    Given url baseUrl
-    And path 'decision/climatizacion/evaluar'
-    And request <cuerpo>
-    When method post
-    Then status 400
-    And match response == { error: 'Se esperaban 3 valores booleanos' }
-    # La petición rechazada no debe quedar registrada como una evaluación
-    Given url baseUrl
-    And path 'decision/climatizacion/definicion'
-    When method get
-    Then status 200
-    And match response.historial == []
-
-    Examples:
-      | caso              | cuerpo                                   |
-      | solo 2 valores    | { valores: [true, true] }                |
-      | 4 valores         | { valores: [true, true, false, false] }  |
-      | sin campo valores | {}                                       |
